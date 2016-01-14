@@ -81,6 +81,7 @@ function ItachAccessory(log, deviceType, deviceIndex, config) {
     this.deviceType = deviceType;
     this.deviceIndex = deviceIndex;
     this.log("Configuring iTach accessory.  Name: " + this.name + ", Host: " + this.host + ", port: " + this.port);
+    this.toggleMode = false;
 
     var id = uuid.generate('itach.' + deviceType + "." + deviceIndex);
     Accessory.call(this, this.name, id);
@@ -88,17 +89,24 @@ function ItachAccessory(log, deviceType, deviceIndex, config) {
 
     if (config.outputs && config.outputs.length > deviceIndex) {
         this.name = config.outputs[deviceIndex].name ? config.outputs[deviceIndex].name : this.name;
-        this.log("Set name to " + this.name);
+        this.toggleMode = config.outputs[deviceIndex].toggleMode;
     }
 
     this.services = null; // will hold the services this accessory supports
     if (this.deviceType == "relay") {
-        var aService = new Service.Switch(this.name);
-        aService
-            .getCharacteristic(Characteristic.On)
-            .on('get', this.getState.bind(this))
-            .on('set', this.setState.bind(this));
-        this.service = aService;
+        if (this.toggleMode) {
+            this.service = new Service.GarageDoorOpener(this.name);
+            this.service
+                .getCharacteristic(Characteristic.TargetDoorState)
+                .on('get', this.getState.bind(this))
+                .on('set', this.setState.bind(this));
+        } else {
+            this.service = new Service.Switch(this.name);
+            this.service
+                .getCharacteristic(Characteristic.On)
+                .on('get', this.getState.bind(this))
+                .on('set', this.setState.bind(this));
+        }
     } else {
         throw new Error("Unsupported device type: " + this.deviceType);
     }
@@ -109,13 +117,22 @@ ItachAccessory.prototype.getServices = function () {
 }
 
 ItachAccessory.prototype.setState = function (state, callback) {
-    var command = "setstate,1:" + (this.deviceIndex + 1) + "," + (state ? '1' : '0');
+    var command = "setstate,1:" + (this.deviceIndex + 1) + "," + (this.toggleMode || state ? '1' : '0');
     this.executeCommand(command, function (data) {
         if(data.trim() == command.trim()) {
-            this.log("Successfully updated state");
-            callback(null);
+            if (this.toggleMode) {
+                setTimeout(function() {
+                    var command = "setstate,1:" + (this.deviceIndex + 1) + ",0";
+                    this.executeCommand(command, function (data) {
+                        if (data.trim() == command.trim()) {
+                            callback(null);
+                        }
+                    });
+                }.bind(this), 1000);
+            } else {
+                callback(null);
+            }
         } else {
-            this.log("Failed t update state");
             callback(new Error('Failed to set state to ' + state + ".  Response: " + data));
         }
 
@@ -125,6 +142,11 @@ ItachAccessory.prototype.setState = function (state, callback) {
 /* TODO
  */
 ItachAccessory.prototype.getState = function (callback) {
+    if (this.toggleMode) {
+        //No way to determine current state in toggle mode.
+        callback(null, "Unknown");
+        return;
+    }
     var command = "getstate,1:" + (this.deviceIndex + 1) + '\r';
     this.executeCommand(command, function (data) {
         var dataSplit = data.split(',');
