@@ -100,6 +100,7 @@ function ItachAccessory(log, deviceType, deviceIndex, config) {
                 .getCharacteristic(Characteristic.TargetDoorState)
                 .on('get', this.getState.bind(this))
                 .on('set', this.setState.bind(this));
+            this.service.setCharacteristic(Characteristic.CurrentDoorState, Characteristic.CurrentDoorState.CLOSED);
         } else {
             this.service = new Service.Switch(this.name);
             this.service
