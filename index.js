@@ -191,6 +191,7 @@ ItachAccessory.prototype.setIrState = function (command, state, callback) {
     this.log("Setting IR state for command: " + command);
 
     var commandArray = this.commands[command];
+    this.irState = false; //Aways false.
 
     if(typeof commandArray === 'string') {
         commandKeys = [command];
@@ -199,9 +200,8 @@ ItachAccessory.prototype.setIrState = function (command, state, callback) {
     }
     commandKeys.reverse();
     this.doNextCall(commandKeys, function() {
-        //Wait 2 seconds, then set switch back to off?
         console.log("Finished all commands");
-        callback("Unknown");
+        callback(null, state);
     }.bind(this));
 
 }
