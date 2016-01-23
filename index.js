@@ -167,14 +167,17 @@ function ItachAccessory(log, deviceType, config, portIndex) {
             service.subtype = "default";
             service
                 .getCharacteristic(Characteristic.On)
-                .on('set', this.setState.bind(this));
+                .on('set', this.setState.bind(this))
+                .on('get', this.getState.bind(this));
             this.services.push(service);
         }
         for (var i = 0; i < Object.keys(this.commands).length; i++) {
             var command = Object.keys(this.commands)[i];
             var service = new Service.Switch(command);
             service.subtype = command;
-            service.getCharacteristic(Characteristic.On).on('set', this.setIrState.bind(this, command));
+            service.getCharacteristic(Characteristic.On)
+                .on('set', this.setIrState.bind(this, command))
+                .on('get', this.getState.bind(this));
             this.services.push(service);
         }
 
