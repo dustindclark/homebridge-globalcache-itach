@@ -1,5 +1,5 @@
 var net = require("net");
-var Service, Characteristic;
+var Service, Characteristic, Accessory, uuid;
 var inherits = require('util').inherits;
 var extend = require('util')._extend;
 
@@ -130,7 +130,7 @@ function ItachAccessory(log, deviceType, config, portIndex) {
     this.isIrSwitch = false;
     this.commands = {};
 
-    var id = uuid.generate('itach.' + deviceType + "." + portIndex);
+    var id = uuid.generate('itach.' + deviceType + "." + this.host + "." + portIndex);
     Accessory.call(this, this.name, id);
     this.uuid_base = id;
 
