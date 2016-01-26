@@ -127,7 +127,6 @@ function ItachAccessory(log, deviceType, config, portIndex) {
     this.portIndex = portIndex;
     this.log("Configuring iTach accessory.  Name: " + this.name + ", Type: " + this.deviceType + " at port: " + this.portIndex);
     this.toggleMode = false;
-    this.isIrSwitch = false;
     this.commands = {};
 
     var id = uuid.generate('itach.' + deviceType + "." + this.host + "." + portIndex);
@@ -162,12 +161,11 @@ function ItachAccessory(log, deviceType, config, portIndex) {
         if (this.commands && this.commands.on && this.commands.off) {
             //Assume default to off.
             this.irState = Characteristic.Off;
-            this.isIrSwitch = true;
             var service = new Service.Switch(this.name);
             service.subtype = "default";
             service
                 .getCharacteristic(Characteristic.On)
-                .on('set', this.setState.bind(this))
+                .on('set', this.setIrState.bind(this, '_on/off_'))
                 .on('get', this.getState.bind(this));
             this.services.push(service);
         }
@@ -196,11 +194,19 @@ ItachAccessory.prototype.getServices = function () {
 ItachAccessory.prototype.setIrState = function (command, state, callback) {
     this.log("Setting IR state for command: " + command);
 
-    var commandArray = this.commands[command];
-    this.irState = false; //Aways false.
+    var commandArray;
 
+    if (command == '_on/off_') {
+        commandArray = state ? this.commands.on : this.commands.off;
+        this.irState = state;
+    } else {
+        commandArray = this.commands[command];
+        this.irState = false; //Aways false.
+    }
+
+    var commandKeys;
     if(typeof commandArray === 'string') {
-        commandKeys = [command];
+        commandKeys = [commandArray];
     } else {
         commandKeys = commandArray.slice(0, commandArray.length);
     }
@@ -233,11 +239,7 @@ ItachAccessory.prototype.setState = function (state, callback) {
     command += (",1:" + (this.portIndex + 1) + ",");
 
     if (this.deviceType == "ir") {
-        if (this.isIrSwitch) {
-            command += state ? this.commands.on : this.commands.off;
-        } else {
-            command += state;
-        }
+        command += state;
     } else {
         command += (this.toggleMode || state ? '1' : '0');
     }
