@@ -173,6 +173,9 @@ function ItachAccessory(log, deviceType, config, portIndex) {
         }
         for (var i = 0; i < Object.keys(this.commands).length; i++) {
             var command = Object.keys(this.commands)[i];
+            if (command == "on" || command == "off") {
+                continue;
+            }
             var service = new Service.Switch(command);
             service.subtype = command;
             service.getCharacteristic(Characteristic.On)
@@ -211,7 +214,8 @@ ItachAccessory.prototype.setIrState = function (command, state, callback) {
 
 ItachAccessory.prototype.doNextCall = function(commandKeys, callback) {
     var self = this;
-    var command = self.commands[commandKeys.pop()];
+    var commandKey = commandKeys.pop();
+    var command = self.commands[commandKey] ? self.commands[commandKey] : commandKey;
     this.setState(command, function (error, state) {
         if (commandKeys.length == 0) {
             callback();
